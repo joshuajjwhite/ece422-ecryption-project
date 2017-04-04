@@ -7,9 +7,6 @@
 void encrypt (long *v, long *k);
 void decrypt (long *v, long *k);
 
-JNIEXPORT jlongArray JNICALL Java_com_company_TEA_encryptLongs
-  (JNIEnv *, jclass, jlongArray, jlongArray);
-
 /*
  * Class:     com_company_TEA
  * Method:    encrypt
@@ -58,22 +55,17 @@ JNIEXPORT jlongArray JNICALL Java_com_company_TEA_decryptLongs
 
     decrypt(valuesToDecypher, keys);
 
-    val1 = valuesToCypher[0];
-    val2 = valuesToCypher[1];
+    val1 = valuesToDecypher[0];
+    val2 = valuesToDecypher[1];
+
     printf("Decyphered Ints C: %li  &  %li\n", val1, val2);
 
-    (*env)->SetLongArrayRegion(env, CypheredLongs, 0, len, valuesToDecypher);
-    (*env)->ReleaseLongArrayElements(env, CypheredLongs, valuesToDecypher, 0);
+    (*env)->SetLongArrayRegion(env, cypheredLongs, 0, len, valuesToDecypher);
+    (*env)->ReleaseLongArrayElements(env, cypheredLongs, valuesToDecypher, 0);
 
-    return CypheredLongs;
+    return cypheredLongs;
 }
 
-JNIEXPORT void JNICALL Java_com_company_TEA_decryptBytes
-   (JNIEnv *env, jclass myClass, jbyteArray cypherByteArray, jbyteArray key){
-
-
-
-}
 
 jbyte amalgamateKeyBytes(jbyte* key){
     long amalgamatedKeyBytes[4];

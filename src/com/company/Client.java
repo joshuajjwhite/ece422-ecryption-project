@@ -64,7 +64,7 @@ public class Client implements Runnable {
         outToServer.writeBytes(getDhk().shareSharedKey() + "\n");
 
         try {
-            TEA.encrypt("Hello World", getDhk().generateLongKeyArray());
+            TEA.test("Hello World!!", getDhk().generateLongKeyArray());
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }

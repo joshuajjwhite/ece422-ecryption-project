@@ -24,15 +24,24 @@ public class TEA {
     }
 
 
-    public static String encrypt(String plainText, long[] keyArray) throws NoSuchAlgorithmException {
+    public static String encrypt(String plainText, long[] keyArray) throws NoSuchAlgorithmException, UnsupportedEncodingException {
 
         String cypherText = null;
-        long[] plainLongs = bytesToLongs(stringToBytes(plainText));
-        long[] cypherLongs = new long[plainLongs.length];
+        long[] plainLongs = removeTrailingZeros(bytesToLongs(stringToBytes(plainText)));
+        byte[] plainBytes = stringToBytes(plainText);
+        long[] cypherLongs = new long[plainLongs.length +1];
 
         long[] valuesToCypher = new long[2];
         long[] valuesCyphered = new long[2];
         int index = 0;
+
+        System.out.println(plainText);
+
+        System.out.print("Plain Bytes Java ");
+        for (byte b : plainBytes) {
+            System.out.print(Byte.toString(b) + " ");
+        }
+        System.out.println("");
 
         System.out.print("Plain longs Java ");
         for (long l : plainLongs) {
@@ -51,35 +60,107 @@ public class TEA {
             }
 
             valuesCyphered = encryptLongs(valuesToCypher, keyArray);
+
+            cypherLongs[index] = valuesCyphered[0];
+            if (((plainLongs.length - index) % 2 != 0) && ((plainLongs.length - index) < 2)) {
+                cypherLongs[index+1] = valuesCyphered[1];
+            } else {
+                cypherLongs[index+1] = valuesCyphered[1];
+            }
+
             index += 2;
         }
 
+        cypherLongs = removeTrailingZeros(cypherLongs);
+
         System.out.print("Cyphered longs Java ");
-        for (long l : valuesCyphered) {
+        for (long l : cypherLongs) {
+            System.out.print(Long.toString(l) + " ");
+        }
+        System.out.println("\n");
+
+        return Arrays.toString(cypherLongs);
+    }
+
+    public static String decrypt(String cypherText, long[] keyArray){
+        String plainText = null;
+        long[] cypherLongs = stringToLongs(cypherText);
+        long[] plainLongs = new long[cypherLongs.length];
+
+        long[] valuesToDecypher = new long[2];
+        long[] valuesDecyphered = new long[2];
+        int index = 0;
+
+        System.out.print("Cyphered longs Java ");
+        for (long l : cypherLongs) {
             System.out.print(Long.toString(l) + " ");
         }
         System.out.println("");
 
-        return cypherText;
+        while (index < cypherLongs.length) {
+
+            valuesToDecypher[0] = cypherLongs[index];
+
+            if (((cypherLongs.length - index) % 2 != 0) && ((cypherLongs.length - index) < 2)) {
+                valuesToDecypher[1] = 0;
+            } else {
+                valuesToDecypher[1] = cypherLongs[index + 1];
+            }
+
+            valuesDecyphered = decryptLongs(valuesToDecypher, keyArray);
+
+            plainLongs[index] = valuesDecyphered[0];
+            if (((cypherLongs.length - index) % 2 != 0) && ((cypherLongs.length - index) < 2)) {
+
+            } else {
+                plainLongs[index+1] = valuesDecyphered[1];
+            }
+
+            index += 2;
+        }
+
+        System.out.print("Plain longs Java ");
+        for (long l : plainLongs) {
+            System.out.print(Long.toString(l) + " ");
+        }
+        System.out.println("");
+
+        System.out.print("Plain bytes Java ");
+        for (byte b : longToBytes(plainLongs)) {
+            System.out.print(Byte.toString(b) + " ");
+        }
+        System.out.println("");
+
+        try {
+            System.out.println(bytesToString(longToBytes(plainLongs)));
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
+        return plainText;
     }
 
+    public static void test(String text, long[] keyArray) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+        decrypt(encrypt(text, keyArray),keyArray);
+    }
 
     /*LONGS________________________________________________________________LONGS*/
 
     private static long[] bytesToLongs(byte[] bytes){
-        int size = (bytes.length / 8) + ((bytes.length % 8 == 0) ? 0 : 1);
+        int size = (bytes.length / 4) + ((bytes.length % 4 == 0) ? 0 : 1);
         ByteBuffer bb = ByteBuffer.allocate(size *8);
         bb.put(bytes);
 
         //Java uses Big Endian. Network program uses Little Endian.
         bb.order(ByteOrder.BIG_ENDIAN);
 
-
         long[] result = new long[size];
         bb.rewind();
         while (bb.remaining() > 0) {
-            result[bb.position()/8] = bb.getInt();
+            result[bb.position()/8] = bb.getLong();
         }
+
+        result = removeTrailingZeros(result);
 
         return result;
     }
@@ -89,17 +170,20 @@ public class TEA {
         LongBuffer longBuffer = byteBuffer.asLongBuffer();
         longBuffer.put(longs);
 
-        byte[] bytes = byteBuffer.array();
 
-        int zeros = 0;
-        for(int i = bytes.length-1; i >= 0 ;i--){
-            if(bytes[i] == 0){zeros +=  1;}
-            else{break;}
+        byte[] bytes = byteBuffer.array();
+        return removeTrailingZeros(bytes);
+    }
+
+    private static long[] stringToLongs(String string){
+        String[] strings =  string.replace("[", "").replace("]","").replaceAll(" ", "").split(",");
+        long[] longs = new long[strings.length];
+
+        for(int i=0; i < strings.length; i++){
+            longs[i] = Long.parseLong(strings[i]);
         }
 
-        byte[] result = Arrays.copyOfRange(bytes, 0, bytes.length-zeros);
-
-        return result;
+        return longs;
     }
 
 
@@ -175,13 +259,31 @@ public class TEA {
 
         byte[] bytes = byteBuffer.array();
 
+        return removeTrailingZeros(bytes);
+    }
+
+    private static long[] removeTrailingZeros(long[] array){
+
         int zeros = 0;
-        for(int i = bytes.length-1; i >= 0 ;i--){
-            if(bytes[i] == 0){zeros +=  1;}
+        for(int i = array.length-1; i >= 0 ;i--){
+            if(array[i] == 0){zeros +=  1;}
             else{break;}
         }
 
-        byte[] result = Arrays.copyOfRange(bytes, 0, bytes.length-zeros);
+        long[] result = Arrays.copyOfRange(array, 0, array.length-zeros);
+
+        return result;
+    }
+
+    private static byte[] removeTrailingZeros(byte[] array){
+
+        int zeros = 0;
+        for(int i = array.length-1; i >= 0 ;i--){
+            if(array[i] == 0){zeros +=  1;}
+            else{break;}
+        }
+
+        byte[] result = Arrays.copyOfRange(array, 0, array.length-zeros);
 
         return result;
     }
