@@ -4,28 +4,39 @@
 #include <jni.h>
 #include "../../com_company_TEA.h"
 
+void encrypt (long *v, long *k);
+void decrypt (long *v, long *k);
+
+JNIEXPORT jlongArray JNICALL Java_com_company_TEA_encryptLongs
+  (JNIEnv *, jclass, jlongArray, jlongArray);
+
 /*
  * Class:     com_company_TEA
  * Method:    encrypt
  * Signature: ()Ljava/lang/String;
  */
- JNIEXPORT jbyteArray JNICALL Java_com_company_TEA_encryptBytes
-  (JNIEnv *env, jobject obj, jbyteArray plainBytes, jbyteArray key){
+ JNIEXPORT jlongArray JNICALL Java_com_company_TEA_encryptLongs
+  (JNIEnv *env, jobject obj, jlongArray plainLongs, jlongArray key){
 
-    jbyte* plainByteArray = (*env)->GetByteArrayElements(env, plainBytes, NULL);
-    jbyte* key = (*env)->GetByteArrayElements(env, key, NULL);
+    jlong* valuesToCypher = (*env)->GetLongArrayElements(env, plainLongs, NULL);
+    jlong* keys = (*env)->GetLongArrayElements(env, key, NULL);
+    jsize len = (*env)->GetArrayLength(env, plainLongs);
 
-    jsize lengthOfArray = (*env)->GetArrayLength(env, plainBytes);
-    jbyte cypherByteArray[lengthOfArray];
+    long val1 = valuesToCypher[0];
+    long val2 = valuesToCypher[1];
 
-    int i;
-    for(i = 0; i < lengthOfArray; i++){
-        cypherByteArray[i] = plainByteArray[i];
-    }
+    printf("Plain Ints C: %li  &  %li\n", val1, val2);
 
-    //cypherByteArray[0] = 9;
-    (*env)->SetByteArrayRegion(env, plainBytes, 0, lengthOfArray, cypherByteArray);
-    return plainBytes;
+    encrypt(valuesToCypher, keys);
+
+    val1 = valuesToCypher[0];
+    val2 = valuesToCypher[1];
+    printf("Cyphered Ints C: %li  &  %li\n", val1, val2);
+
+    (*env)->SetLongArrayRegion(env, plainLongs, 0, len, valuesToCypher);
+    (*env)->ReleaseLongArrayElements(env, plainLongs, valuesToCypher, 0);
+
+    return plainLongs;
   }
 
 /*
@@ -33,6 +44,30 @@
  * Method:    decrypt
  * Signature: ()Ljava/lang/String;
  */
+JNIEXPORT jlongArray JNICALL Java_com_company_TEA_decryptLongs
+   (JNIEnv *env, jclass myClass, jlongArray cypheredLongs, jlongArray key){
+
+    jlong* valuesToDecypher = (*env)->GetLongArrayElements(env, cypheredLongs, NULL);
+    jlong* keys = (*env)->GetLongArrayElements(env, key, NULL);
+    jsize len = (*env)->GetArrayLength(env, cypheredLongs);
+
+    long val1 = valuesToDecypher[0];
+    long val2 = valuesToDecypher[1];
+
+    printf("Cyphered Ints C: %li  &  %li\n", val1, val2);
+
+    decrypt(valuesToDecypher, keys);
+
+    val1 = valuesToCypher[0];
+    val2 = valuesToCypher[1];
+    printf("Decyphered Ints C: %li  &  %li\n", val1, val2);
+
+    (*env)->SetLongArrayRegion(env, CypheredLongs, 0, len, valuesToDecypher);
+    (*env)->ReleaseLongArrayElements(env, CypheredLongs, valuesToDecypher, 0);
+
+    return CypheredLongs;
+}
+
 JNIEXPORT void JNICALL Java_com_company_TEA_decryptBytes
    (JNIEnv *env, jclass myClass, jbyteArray cypherByteArray, jbyteArray key){
 

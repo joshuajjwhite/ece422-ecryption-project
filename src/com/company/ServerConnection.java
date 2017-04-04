@@ -26,8 +26,8 @@ public class ServerConnection implements Runnable {
         try {
             handshake();
 
-            System.out.println("Closing Server Connection");
-            getSocket().close();
+            //System.out.println("Closing Server Connection\n");
+            //getSocket().close();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -47,6 +47,20 @@ public class ServerConnection implements Runnable {
         else{
             System.out.print("Server didn't get handshake");
         }
+
+        //key Exchange
+        String p = inFromClient.readLine();
+        String g = inFromClient.readLine();
+
+        //System.out.println(p);
+        //System.out.println(g);
+
+        setDhk(new DHKeyGenerator(p,g));
+
+        outToClient.writeBytes(getDhk().shareSharedKey() + "\n");
+
+        String sharedKey = inFromClient.readLine();
+        getDhk().recieveSharedKey(sharedKey);
     }
 
     public void thing() throws Exception{

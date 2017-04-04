@@ -17,11 +17,7 @@ public class EncryptionDriver {
         //client2.start();
 
 
-        /*try {
-            TEA.encrypt("Hello World");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        */
+
+
     }
 }

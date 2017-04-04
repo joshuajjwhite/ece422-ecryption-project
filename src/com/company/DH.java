@@ -31,7 +31,7 @@ public class DH {
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
-        paramGen.init(128);
+        paramGen.init(256);
         AlgorithmParameters params = paramGen.generateParameters();
         try {
             setDhParamSpec((DHParameterSpec)params.getParameterSpec

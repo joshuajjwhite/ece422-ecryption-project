@@ -2,6 +2,7 @@ package com.company;
 
 import java.io.*;
 import java.net.*;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * Created by joshua on 30/03/17.
@@ -27,7 +28,7 @@ public class Client implements Runnable {
 
         try {
             handshake();
-            getSocket().close();
+            //getSocket().close();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -45,8 +46,27 @@ public class Client implements Runnable {
         System.out.println("Handshake");
         outToServer.writeBytes("Handshake\n");
         String serverStr = inFromServer.readLine();
+
         if(serverStr.equals("Ack")){
             System.out.print("Handshake Established\n");
+        }
+
+        //Key Exchange
+        //System.out.println(getDhk().sharePrime());
+        //System.out.println(getDhk().shareGenerator());
+
+        outToServer.writeBytes(getDhk().sharePrime() + "\n");
+        outToServer.writeBytes(getDhk().shareGenerator() + "\n");
+
+        String sharedKey = inFromServer.readLine();
+        getDhk().recieveSharedKey(sharedKey);
+
+        outToServer.writeBytes(getDhk().shareSharedKey() + "\n");
+
+        try {
+            TEA.encrypt("Hello World", getDhk().generateLongKeyArray());
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
         }
     }
 
@@ -69,6 +89,8 @@ public class Client implements Runnable {
 
 
     }
+
+
 
     public Socket getSocket() {
         return socket;
@@ -116,5 +138,9 @@ public class Client implements Runnable {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public long[] keyArray(){
+        return getDhk().generateLongKeyArray();
     }
 }

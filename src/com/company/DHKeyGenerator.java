@@ -1,6 +1,9 @@
 package com.company;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.nio.LongBuffer;
 import java.security.SecureRandom;
 
 /**
@@ -8,7 +11,7 @@ import java.security.SecureRandom;
  */
 public class DHKeyGenerator {
 
-    private static int keySize = 128;
+    private static int keySize = 256;
 
     private BigInteger prime;
     private BigInteger generator;
@@ -38,13 +41,45 @@ public class DHKeyGenerator {
     }
 
     private void generateSharedSectret(BigInteger sharedKey){
-
         setSharedSecret(sharedKey.modPow(getSecret(), getPrime()));
     }
 
     public void recieveSharedKey(String sharedKeyString){
         generateSharedSectret(new BigInteger(sharedKeyString));
-        System.out.println(getSharedSecret().toString());
+    }
+
+    public int[] generateIntKeyArray(){
+        int length = (128/8)/4;
+        //int shift = Integer.BYTES*8;
+        int keyArray[] = new int[length];
+        int index = 0;
+
+        IntBuffer buffer = ByteBuffer.wrap(getSecret().toByteArray()).asIntBuffer();
+        int xor = 0;
+        while (buffer.hasRemaining()) {
+            xor ^= buffer.get();
+            keyArray[index] = xor;
+            index++;
+        }
+
+        return keyArray;
+    }
+
+    public long[] generateLongKeyArray(){
+        int length = (256/8)/8;
+        //int shift = Integer.BYTES*8;
+        long keyArray[] = new long[length];
+        int index = 0;
+
+        LongBuffer buffer = ByteBuffer.wrap(getSecret().toByteArray()).asLongBuffer();
+        long xor = 0;
+        while (buffer.hasRemaining()) {
+            xor ^= buffer.get();
+            keyArray[index] = xor;
+            index++;
+        }
+
+        return keyArray;
     }
 
     public static void main(String args[]){
