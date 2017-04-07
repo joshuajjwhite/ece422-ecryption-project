@@ -3,6 +3,9 @@ package com.company;
 import java.io.*;
 import java.net.*;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+
+import static java.lang.Thread.sleep;
 
 /**
  * Created by joshua on 30/03/17.
@@ -11,63 +14,111 @@ public class Client implements Runnable {
 
     private DHKeyGenerator dhk;
     private Socket socket;
-    private BufferedReader inFromServer = null;
-    private DataOutputStream outToServer = null;
 
     private String userID;
     private String password;
 
-    public Client(String userID, String password){
+    private long[] encryptionKey;
+    private static long[] ACCOUNT_ENCRYPTION = {41371378120415169l, -777526119039919309l,
+            -4459589122261330969l, 2364346053016476091l};
+
+    public Client(){
         setDhk(new DHKeyGenerator());
-        setUserID(userID);
-        setPassword(password);
     }
 
     @Override
     public void run() {
 
         try {
-            handshake();
-            //getSocket().close();
+            Socket clientSocket = new Socket("localhost", 16000);
+            setSocket(clientSocket);
+            DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+            BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+            BufferedReader inFromUser = new BufferedReader( new InputStreamReader(System.in));
+
+            System.out.print("Username: ");
+            setUserID(inFromUser.readLine());
+            System.out.print("Password: ");
+            setPassword(inFromUser.readLine());
+
+            handshake(outToServer, inFromServer);
+            keyExchange(outToServer, inFromServer);
+            if(!credentialsExchange(outToServer, inFromServer)){
+                return;
+            }
+
+            while(true){
+                System.out.print("Type a filename to request or \"exit\": ");
+                String filename = inFromUser.readLine();
+                if(filename.equals("exit")){
+                    encryptedWrite("exit",outToServer);
+                    sleep(500);
+                    break;
+                }
+
+                if(requestFiles(filename, outToServer, inFromServer)){
+                    filename = encryptedRead(inFromServer);
+                    String fileBody = encryptedRead(inFromServer);
+
+                    presentFile(filename,fileBody);
+                }
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
-    public void handshake() throws IOException {
-        Socket clientSocket = new Socket("localhost", 16000);
-        setSocket(clientSocket);
-        DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-        BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        //setInFromServer(inFromServer);
-        //setOutToServer(outToServer);
+    public void handshake(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
+        outToConnection.writeBytes("Handshake\n");
+        String serverStr = inFromConnection.readLine();
 
-        System.out.println("Handshake");
-        outToServer.writeBytes("Handshake\n");
-        String serverStr = inFromServer.readLine();
+        if(!serverStr.equals("ACK")){
+            System.out.println("Handshake Failed");
+            return;
+        }
+    }
 
-        if(serverStr.equals("Ack")){
-            System.out.print("Handshake Established\n");
+    public void presentFile(String filename, String fileBody){
+        System.out.println("\nFile Found:");
+        System.out.println("---------------- " + filename + " ---------------");
+        System.out.println(fileBody);
+    }
+
+    public boolean requestFiles(String filename, DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
+        encryptedWrite(filename, outToConnection);
+        if(!encryptedRead(inFromConnection).equals("ACK")){
+            System.out.println("404 File Not Found");
+            return false;
         }
 
-        //Key Exchange
-        //System.out.println(getDhk().sharePrime());
-        //System.out.println(getDhk().shareGenerator());
+        return true;
+    }
 
-        outToServer.writeBytes(getDhk().sharePrime() + "\n");
-        outToServer.writeBytes(getDhk().shareGenerator() + "\n");
+    public boolean credentialsExchange(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
+        encryptedWrite(getUserID(), outToConnection);
+        encryptedWrite(getPassword(), outToConnection);
 
-        String sharedKey = inFromServer.readLine();
+        String authResponse = encryptedRead(inFromConnection);
+        if(authResponse.equals("AuthenticationFailed")){
+            System.out.print("Authentication failed, close Client\n\n");
+            return false;
+        }
+        return true;
+    }
+
+    public void keyExchange(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
+        outToConnection.writeBytes(getDhk().sharePrime() + "\n");
+        outToConnection.writeBytes(getDhk().shareGenerator() + "\n");
+
+        String sharedKey = inFromConnection.readLine();
         getDhk().recieveSharedKey(sharedKey);
 
-        outToServer.writeBytes(getDhk().shareSharedKey() + "\n");
+        outToConnection.writeBytes(getDhk().shareSharedKey() + "\n");
 
-        try {
-            TEA.test("Hello World!!", getDhk().generateLongKeyArray());
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
+        long[] encryptionKey = getDhk().generateLongKeyArray();
+        setEncryptionKey(encryptionKey);
     }
 
     public void thing() throws Exception{
@@ -90,7 +141,42 @@ public class Client implements Runnable {
 
     }
 
+    public void writeToConnection(String message, DataOutputStream outToConnection){
+        try {
+            outToConnection.writeBytes(message + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    public void encryptedWrite(String message, DataOutputStream outToConnection){
+        try {
+            message = TEA.encrypt(message, getEncryptionKey());
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        writeToConnection(message, outToConnection);
+    }
+
+    public String readFromConnection(BufferedReader reader){
+        try {
+            return reader.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "ReadFailure";
+    }
+
+    public String encryptedRead(BufferedReader reader){
+        try {
+            return TEA.decrypt(readFromConnection(reader), getEncryptionKey());
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return "EncryptedReadFailure";
+    }
 
     public Socket getSocket() {
         return socket;
@@ -106,22 +192,6 @@ public class Client implements Runnable {
 
     public void setDhk(DHKeyGenerator dhk) {
         this.dhk = dhk;
-    }
-
-    public BufferedReader getInFromServer() {
-        return inFromServer;
-    }
-
-    public void setInFromServer(BufferedReader inFromServer) {
-        this.inFromServer = inFromServer;
-    }
-
-    public OutputStream getOutToServer() {
-        return outToServer;
-    }
-
-    public void setOutToServer(DataOutputStream outToServer) {
-        this.outToServer = outToServer;
     }
 
     public String getUserID() {
@@ -142,5 +212,13 @@ public class Client implements Runnable {
 
     public long[] keyArray(){
         return getDhk().generateLongKeyArray();
+    }
+
+    public void setEncryptionKey(long[] encryptionKey) {
+        this.encryptionKey = encryptionKey;
+    }
+
+    public long[] getEncryptionKey(){
+        return this.encryptionKey;
     }
 }

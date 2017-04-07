@@ -9,7 +9,7 @@
 #SFAIL=$5
 #TIMEOUT=$6
 
-javac -classpath ./com/company/commons-io-2.5.jar ./com/company/*.java
+javac -classpath ./commons-io-2.5.jar ./com/company/*.java
 javah -jni com.company.TEA
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.

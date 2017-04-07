@@ -22,13 +22,14 @@ void decrypt (long *v, long *k);
     long val1 = valuesToCypher[0];
     long val2 = valuesToCypher[1];
 
-    printf("Plain Ints C: %li  &  %li\n", val1, val2);
+    //printf("Plain Ints C: %li  &  %li\n", val1, val2);
 
     encrypt(valuesToCypher, keys);
 
     val1 = valuesToCypher[0];
     val2 = valuesToCypher[1];
-    printf("Cyphered Ints C: %li  &  %li\n", val1, val2);
+
+    //printf("Cyphered Ints C: %li  &  %li\n", val1, val2);
 
     (*env)->SetLongArrayRegion(env, plainLongs, 0, len, valuesToCypher);
     (*env)->ReleaseLongArrayElements(env, plainLongs, valuesToCypher, 0);
@@ -51,14 +52,14 @@ JNIEXPORT jlongArray JNICALL Java_com_company_TEA_decryptLongs
     long val1 = valuesToDecypher[0];
     long val2 = valuesToDecypher[1];
 
-    printf("Cyphered Ints C: %li  &  %li\n", val1, val2);
+    //printf("Cyphered Ints C: %li  &  %li\n", val1, val2);
 
     decrypt(valuesToDecypher, keys);
 
     val1 = valuesToDecypher[0];
     val2 = valuesToDecypher[1];
 
-    printf("Decyphered Ints C: %li  &  %li\n", val1, val2);
+    //printf("Decyphered Ints C: %li  &  %li\n", val1, val2);
 
     (*env)->SetLongArrayRegion(env, cypheredLongs, 0, len, valuesToDecypher);
     (*env)->ReleaseLongArrayElements(env, cypheredLongs, valuesToDecypher, 0);

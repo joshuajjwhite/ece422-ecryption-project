@@ -1,21 +1,24 @@
 package com.company;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.lang.reflect.Array;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 /**
  * Created by joshua on 30/03/17.
  */
 public class ServerConnection implements Runnable {
 
+    protected static String SERVER_FILE_DIRECTORY = "./server-files/";
+    private static long[] ACCOUNT_ENCRYPTION = {41371378120415169l, -777526119039919309l,
+            -4459589122261330969l, 2364346053016476091l};
+
     private Socket socket;
     private DHKeyGenerator dhk;
-    private BufferedReader inFromClient;
-    private DataOutputStream outToClient;
+    private long[] encryptionKey;
 
     public ServerConnection(Socket socket){
         setSocket(socket);
@@ -24,43 +27,147 @@ public class ServerConnection implements Runnable {
     @Override
     public void run() {
         try {
-            handshake();
+            BufferedReader inFromClient =
+                    new BufferedReader(new InputStreamReader(getSocket().getInputStream()));
+            DataOutputStream outToClient = new DataOutputStream(getSocket().getOutputStream());
 
-            //System.out.println("Closing Server Connection\n");
-            //getSocket().close();
+            handshake(outToClient, inFromClient);
+
+            keyExchange(outToClient, inFromClient);
+
+            if(!credentialsExchangeAuthenticate(outToClient, inFromClient)){
+                return;
+            }
+
+            while(true){
+                if(!provideFiles(outToClient, inFromClient)){
+                    System.out.println("Closing Server Connection");
+                    break;
+                }
+            }
+
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void handshake() throws IOException {
-        BufferedReader inFromClient =
-                new BufferedReader(new InputStreamReader(getSocket().getInputStream()));
-        DataOutputStream outToClient = new DataOutputStream(getSocket().getOutputStream());
-        //setInFromClient(inFromClient);
-        //setOutToClient(outToClient);
-
-        String clientStr = inFromClient.readLine();
+    public void handshake(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
+        String clientStr = inFromConnection.readLine();
         if(clientStr.equals("Handshake")){
-            outToClient.writeBytes("Ack\n");
+            outToConnection.writeBytes("ACK" + "\n");
         }
         else{
             System.out.print("Server didn't get handshake");
         }
+    }
 
-        //key Exchange
-        String p = inFromClient.readLine();
-        String g = inFromClient.readLine();
+    private boolean authenticate(String username, String password) throws IOException {
+        FileHandler accounts = new FileHandler( SERVER_FILE_DIRECTORY + "accounts.txt");
+        String[] account;
+        for(String str: accounts.readByLine()){
+            account = str.split("],");
+            //System.out.println("Checking \"" + TEA.decrypt(account[0], ACCOUNT_ENCRYPTION) + "\" and " + username );
+            if(TEA.decrypt(account[0], ACCOUNT_ENCRYPTION).equals(username)){
 
-        //System.out.println(p);
-        //System.out.println(g);
+                if(TEA.decrypt(account[1], ACCOUNT_ENCRYPTION).equals(password)){
+                    return true;
+                }
+                else{System.out.print("Wrong Password --- ");}
+            }
+        }
+        System.out.println("Authentication Failed");
+        return false;
+    }
+
+    public boolean provideFiles(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
+        String filename = encryptedRead(inFromConnection, encryptionKey);
+        if(filename.equals("exit")){
+            return false;
+        }
+
+        String fileRead = readServerFile(filename);
+
+        if(fileRead == null){
+            encryptedWrite("FILE_NOT_FOUND", outToConnection, encryptionKey);
+
+        }
+        encryptedWrite("ACK", outToConnection, encryptionKey);
+        encryptedWrite(filename, outToConnection, encryptionKey);
+        encryptedWrite(fileRead, outToConnection, encryptionKey);
+        return true;
+    }
+
+    public boolean credentialsExchangeAuthenticate(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
+        String username = encryptedRead(inFromConnection, encryptionKey);
+        String password = encryptedRead(inFromConnection, encryptionKey);
+
+        if(! authenticate(username,password)){
+            encryptedWrite("AuthenticationFailed", outToConnection, encryptionKey);
+
+            return false;
+        }
+        else{
+            encryptedWrite("ACK", outToConnection, encryptionKey);
+            return true;
+        }
+    }
+
+    public void keyExchange(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
+        String p = readFromConnection(inFromConnection);
+        String g = readFromConnection(inFromConnection);
 
         setDhk(new DHKeyGenerator(p,g));
 
-        outToClient.writeBytes(getDhk().shareSharedKey() + "\n");
+        outToConnection.writeBytes(getDhk().shareSharedKey() + "\n");
 
-        String sharedKey = inFromClient.readLine();
+        String sharedKey = inFromConnection.readLine();
         getDhk().recieveSharedKey(sharedKey);
+
+        long[] encryptionKey = getDhk().generateLongKeyArray();
+        setEncryptionKey(encryptionKey);
+    }
+
+    public String readServerFile(String fileName) throws IOException {
+        return new FileHandler(SERVER_FILE_DIRECTORY + fileName).readFromFile();
+    }
+
+    public void writeToConnection(String message, DataOutputStream outToConnection){
+        try {
+            outToConnection.writeBytes(message + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void encryptedWrite(String message, DataOutputStream outToConnection, long[] encryptionKey){
+        try {
+            message = TEA.encrypt(message, encryptionKey);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        writeToConnection(message, outToConnection);
+    }
+
+    public String readFromConnection(BufferedReader reader){
+        try {
+            return reader.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "ReadFailure";
+    }
+
+    public String encryptedRead(BufferedReader reader, long[] encryptionKey){
+        try {
+            return TEA.decrypt(readFromConnection(reader), encryptionKey);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return "EncryptedReadFailure";
     }
 
     public void thing() throws Exception{
@@ -96,19 +203,17 @@ public class ServerConnection implements Runnable {
         return this.dhk;
     }
 
-    public BufferedReader getInFromClient() {
-        return inFromClient;
+    public static void addAccount(String username, String password) throws IOException, NoSuchAlgorithmException {
+        FileHandler accounts = new FileHandler( SERVER_FILE_DIRECTORY + "accounts.txt");
+        accounts.writeToFile(TEA.encrypt(username, ACCOUNT_ENCRYPTION) + "," +
+                TEA.encrypt(password, ACCOUNT_ENCRYPTION));
     }
 
-    public void setInFromClient(BufferedReader inFromClient) {
-        this.inFromClient = inFromClient;
+    public long[] getEncryptionKey() {
+        return encryptionKey;
     }
 
-    public DataOutputStream getOutToClient() {
-        return outToClient;
-    }
-
-    public void setOutToClient(DataOutputStream outToClient) {
-        this.outToClient = outToClient;
+    public void setEncryptionKey(long[] encryptionKey) {
+        this.encryptionKey = encryptionKey;
     }
 }

@@ -54,7 +54,7 @@ public class DHKeyGenerator {
         int keyArray[] = new int[length];
         int index = 0;
 
-        IntBuffer buffer = ByteBuffer.wrap(getSecret().toByteArray()).asIntBuffer();
+        IntBuffer buffer = ByteBuffer.wrap(getSharedSecret().toByteArray()).asIntBuffer();
         int xor = 0;
         while (buffer.hasRemaining()) {
             xor ^= buffer.get();
@@ -71,7 +71,7 @@ public class DHKeyGenerator {
         long keyArray[] = new long[length];
         int index = 0;
 
-        LongBuffer buffer = ByteBuffer.wrap(getSecret().toByteArray()).asLongBuffer();
+        LongBuffer buffer = ByteBuffer.wrap(getSharedSecret().toByteArray()).asLongBuffer();
         long xor = 0;
         while (buffer.hasRemaining()) {
             xor ^= buffer.get();
