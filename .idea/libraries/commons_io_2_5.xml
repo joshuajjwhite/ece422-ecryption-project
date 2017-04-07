@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="commons-io-2.5">
+    <CLASSES />
+    <JAVADOC />
+    <NATIVE>
+      <root url="file://$PROJECT_DIR$/src/com/company" />
+    </NATIVE>
+    <SOURCES />
+  </library>
+</component>
