@@ -30,16 +30,14 @@ public class Server implements Runnable {
         Socket socket = null;
 
         try {
-            serverSocket = new ServerSocket(16000);
+            serverSocket = new ServerSocket(PORT);
         } catch (IOException e) {
             e.printStackTrace();
 
         }
 
-        int i = 0;
 
         while (true) {
-
             try {
                 socket = serverSocket.accept();
             } catch (IOException e) {
@@ -47,7 +45,6 @@ public class Server implements Runnable {
             }
             // new thread for a client
             new Thread(new ServerConnection(socket)).start();
-            i++;
         }
     }
 

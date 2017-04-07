@@ -11,7 +11,7 @@ import java.security.SecureRandom;
  */
 public class DHKeyGenerator {
 
-    private static int keySize = 256;
+    private static int KEY_SIZE = 256;
 
     private BigInteger prime;
     private BigInteger generator;
@@ -20,16 +20,16 @@ public class DHKeyGenerator {
 
     public DHKeyGenerator(){
         SecureRandom secRand = new SecureRandom();
-        setPrime(BigInteger.probablePrime(keySize, secRand));
-        setGenerator(BigInteger.probablePrime(keySize, secRand));
-        setSecret(BigInteger.probablePrime(keySize, secRand));
+        setPrime(BigInteger.probablePrime(KEY_SIZE, secRand));
+        setGenerator(BigInteger.probablePrime(KEY_SIZE, secRand));
+        setSecret(BigInteger.probablePrime(KEY_SIZE, secRand));
     }
 
     public DHKeyGenerator(String p, String g){
         SecureRandom secRand = new SecureRandom();
         setPrime(new BigInteger(p));
         setGenerator(new BigInteger(g));
-        setSecret(BigInteger.probablePrime(keySize, secRand));
+        setSecret(BigInteger.probablePrime(KEY_SIZE, secRand));
     }
 
     private BigInteger generateSharedKey(){
@@ -66,7 +66,7 @@ public class DHKeyGenerator {
     }
 
     public long[] generateLongKeyArray(){
-        int length = (256/8)/8;
+        int length = (KEY_SIZE/8)/8;
         //int shift = Integer.BYTES*8;
         long keyArray[] = new long[length];
         int index = 0;

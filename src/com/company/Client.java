@@ -12,44 +12,37 @@ import static java.lang.Thread.sleep;
  */
 public class Client implements Runnable {
 
-    private DHKeyGenerator dhk;
-    private Socket socket;
-
-    private String userID;
-    private String password;
-
     private long[] encryptionKey;
+
     private static long[] ACCOUNT_ENCRYPTION = {41371378120415169l, -777526119039919309l,
             -4459589122261330969l, 2364346053016476091l};
+    private static int PORT = 16000;
 
-    public Client(){
-        setDhk(new DHKeyGenerator());
-    }
+    public Client(){}
 
     @Override
     public void run() {
 
         try {
-            Socket clientSocket = new Socket("localhost", 16000);
-            setSocket(clientSocket);
+            Socket clientSocket = new Socket("localhost", PORT);;
             DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
             BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
             BufferedReader inFromUser = new BufferedReader( new InputStreamReader(System.in));
 
             System.out.print("Username: ");
-            setUserID(inFromUser.readLine());
+            String username = inFromUser.readLine();
             System.out.print("Password: ");
-            setPassword(inFromUser.readLine());
+            String password = inFromUser.readLine();
 
             handshake(outToServer, inFromServer);
             keyExchange(outToServer, inFromServer);
-            if(!credentialsExchange(outToServer, inFromServer)){
+            if(!credentialsExchange(outToServer, inFromServer, username, password)){
                 return;
             }
 
             while(true){
-                System.out.print("Type a filename to request or \"exit\": ");
+                System.out.print("\nType a filename to request or \"exit\": ");
                 String filename = inFromUser.readLine();
                 if(filename.equals("exit")){
                     encryptedWrite("exit",outToServer);
@@ -96,9 +89,9 @@ public class Client implements Runnable {
         return true;
     }
 
-    public boolean credentialsExchange(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
-        encryptedWrite(getUserID(), outToConnection);
-        encryptedWrite(getPassword(), outToConnection);
+    public boolean credentialsExchange(DataOutputStream outToConnection, BufferedReader inFromConnection, String username, String password) throws IOException {
+        encryptedWrite(username, outToConnection);
+        encryptedWrite(password, outToConnection);
 
         String authResponse = encryptedRead(inFromConnection);
         if(authResponse.equals("AuthenticationFailed")){
@@ -109,36 +102,17 @@ public class Client implements Runnable {
     }
 
     public void keyExchange(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
-        outToConnection.writeBytes(getDhk().sharePrime() + "\n");
-        outToConnection.writeBytes(getDhk().shareGenerator() + "\n");
+        DHKeyGenerator dhk = new DHKeyGenerator();
+        outToConnection.writeBytes(dhk.sharePrime() + "\n");
+        outToConnection.writeBytes(dhk.shareGenerator() + "\n");
 
         String sharedKey = inFromConnection.readLine();
-        getDhk().recieveSharedKey(sharedKey);
+        dhk.recieveSharedKey(sharedKey);
 
-        outToConnection.writeBytes(getDhk().shareSharedKey() + "\n");
+        outToConnection.writeBytes(dhk.shareSharedKey() + "\n");
 
-        long[] encryptionKey = getDhk().generateLongKeyArray();
+        long[] encryptionKey = dhk.generateLongKeyArray();
         setEncryptionKey(encryptionKey);
-    }
-
-    public void thing() throws Exception{
-
-
-        String sentence;
-        String modifiedSentence;
-        System.out.print("Waiting for input: ");
-        BufferedReader inFromUser = new BufferedReader( new InputStreamReader(System.in));
-        Socket clientSocket = new Socket("localhost", 16000);
-        DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-        BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        sentence = inFromUser.readLine();
-        outToServer.writeBytes(sentence + '\n');
-        modifiedSentence = inFromServer.readLine();
-        System.out.println("FROM SERVER: " + modifiedSentence);
-        System.out.println("Closing Client Socket");
-        clientSocket.close();
-
-
     }
 
     public void writeToConnection(String message, DataOutputStream outToConnection){
@@ -176,42 +150,6 @@ public class Client implements Runnable {
             e.printStackTrace();
         }
         return "EncryptedReadFailure";
-    }
-
-    public Socket getSocket() {
-        return socket;
-    }
-
-    public void setSocket(Socket socket) {
-        this.socket = socket;
-    }
-
-    public DHKeyGenerator getDhk() {
-        return dhk;
-    }
-
-    public void setDhk(DHKeyGenerator dhk) {
-        this.dhk = dhk;
-    }
-
-    public String getUserID() {
-        return userID;
-    }
-
-    public void setUserID(String userID) {
-        this.userID = userID;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public long[] keyArray(){
-        return getDhk().generateLongKeyArray();
     }
 
     public void setEncryptionKey(long[] encryptionKey) {

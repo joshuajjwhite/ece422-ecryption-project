@@ -17,7 +17,6 @@ public class ServerConnection implements Runnable {
             -4459589122261330969l, 2364346053016476091l};
 
     private Socket socket;
-    private DHKeyGenerator dhk;
     private long[] encryptionKey;
 
     public ServerConnection(Socket socket){
@@ -68,7 +67,6 @@ public class ServerConnection implements Runnable {
         String[] account;
         for(String str: accounts.readByLine()){
             account = str.split("],");
-            //System.out.println("Checking \"" + TEA.decrypt(account[0], ACCOUNT_ENCRYPTION) + "\" and " + username );
             if(TEA.decrypt(account[0], ACCOUNT_ENCRYPTION).equals(username)){
 
                 if(TEA.decrypt(account[1], ACCOUNT_ENCRYPTION).equals(password)){
@@ -82,7 +80,7 @@ public class ServerConnection implements Runnable {
     }
 
     public boolean provideFiles(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
-        String filename = encryptedRead(inFromConnection, encryptionKey);
+        String filename = encryptedRead(inFromConnection);
         if(filename.equals("exit")){
             return false;
         }
@@ -90,26 +88,26 @@ public class ServerConnection implements Runnable {
         String fileRead = readServerFile(filename);
 
         if(fileRead == null){
-            encryptedWrite("FILE_NOT_FOUND", outToConnection, encryptionKey);
-
+            encryptedWrite("FILE_NOT_FOUND", outToConnection);
+            return true;
         }
-        encryptedWrite("ACK", outToConnection, encryptionKey);
-        encryptedWrite(filename, outToConnection, encryptionKey);
-        encryptedWrite(fileRead, outToConnection, encryptionKey);
+        encryptedWrite("ACK", outToConnection);
+        encryptedWrite(filename, outToConnection);
+        encryptedWrite(fileRead, outToConnection);
         return true;
     }
 
     public boolean credentialsExchangeAuthenticate(DataOutputStream outToConnection, BufferedReader inFromConnection) throws IOException {
-        String username = encryptedRead(inFromConnection, encryptionKey);
-        String password = encryptedRead(inFromConnection, encryptionKey);
+        String username = encryptedRead(inFromConnection);
+        String password = encryptedRead(inFromConnection);
 
         if(! authenticate(username,password)){
-            encryptedWrite("AuthenticationFailed", outToConnection, encryptionKey);
+            encryptedWrite("AuthenticationFailed", outToConnection);
 
             return false;
         }
         else{
-            encryptedWrite("ACK", outToConnection, encryptionKey);
+            encryptedWrite("ACK", outToConnection);
             return true;
         }
     }
@@ -118,14 +116,14 @@ public class ServerConnection implements Runnable {
         String p = readFromConnection(inFromConnection);
         String g = readFromConnection(inFromConnection);
 
-        setDhk(new DHKeyGenerator(p,g));
+        DHKeyGenerator dhk = new DHKeyGenerator(p,g);
 
-        outToConnection.writeBytes(getDhk().shareSharedKey() + "\n");
+        outToConnection.writeBytes(dhk.shareSharedKey() + "\n");
 
         String sharedKey = inFromConnection.readLine();
-        getDhk().recieveSharedKey(sharedKey);
+        dhk.recieveSharedKey(sharedKey);
 
-        long[] encryptionKey = getDhk().generateLongKeyArray();
+        long[] encryptionKey = dhk.generateLongKeyArray();
         setEncryptionKey(encryptionKey);
     }
 
@@ -141,9 +139,9 @@ public class ServerConnection implements Runnable {
         }
     }
 
-    public void encryptedWrite(String message, DataOutputStream outToConnection, long[] encryptionKey){
+    public void encryptedWrite(String message, DataOutputStream outToConnection){
         try {
-            message = TEA.encrypt(message, encryptionKey);
+            message = TEA.encrypt(message, getEncryptionKey());
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (UnsupportedEncodingException e) {
@@ -161,30 +159,19 @@ public class ServerConnection implements Runnable {
         return "ReadFailure";
     }
 
-    public String encryptedRead(BufferedReader reader, long[] encryptionKey){
+    public String encryptedRead(BufferedReader reader){
         try {
-            return TEA.decrypt(readFromConnection(reader), encryptionKey);
+            return TEA.decrypt(readFromConnection(reader), getEncryptionKey());
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
         return "EncryptedReadFailure";
     }
 
-    public void thing() throws Exception{
-
-        String clientSentence;
-        String capitalizedSentence;
-
-        BufferedReader inFromClient =
-                new BufferedReader(new InputStreamReader(getSocket().getInputStream()));
-        DataOutputStream outToClient = new DataOutputStream(getSocket().getOutputStream());
-        clientSentence = inFromClient.readLine();
-        System.out.println("Received: " + clientSentence);
-        capitalizedSentence = clientSentence.toUpperCase() + '\n';
-        outToClient.writeBytes(capitalizedSentence);
-
-        System.out.println("Closing Server Connection");
-        getSocket().close();
+    public static void addAccount(String username, String password) throws IOException, NoSuchAlgorithmException {
+        FileHandler accounts = new FileHandler( SERVER_FILE_DIRECTORY + "accounts.txt");
+        accounts.writeToFile(TEA.encrypt(username, ACCOUNT_ENCRYPTION) + "," +
+                TEA.encrypt(password, ACCOUNT_ENCRYPTION));
     }
 
     public Socket getSocket() {
@@ -193,20 +180,6 @@ public class ServerConnection implements Runnable {
 
     public void setSocket(Socket socket) {
         this.socket = socket;
-    }
-
-    public void setDhk(DHKeyGenerator dhk){
-        this.dhk = dhk;
-    }
-
-    public DHKeyGenerator getDhk(){
-        return this.dhk;
-    }
-
-    public static void addAccount(String username, String password) throws IOException, NoSuchAlgorithmException {
-        FileHandler accounts = new FileHandler( SERVER_FILE_DIRECTORY + "accounts.txt");
-        accounts.writeToFile(TEA.encrypt(username, ACCOUNT_ENCRYPTION) + "," +
-                TEA.encrypt(password, ACCOUNT_ENCRYPTION));
     }
 
     public long[] getEncryptionKey() {
