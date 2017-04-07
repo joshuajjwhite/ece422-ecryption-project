@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>com.company</OriginalElement>
+  <nodes>
+    <node x="159.5" y="876.0">com.company.Server</node>
+    <node x="144.5" y="1003.0">com.company.ServerDriver</node>
+    <node x="0.0" y="137.5">com.company.FileHandler</node>
+    <node x="621.0" y="887.5">com.company.ClientDriver</node>
+    <node x="899.0" y="0.0">com.company.TEA</node>
+    <node x="546.0" y="506.5">com.company.Client</node>
+    <node x="283.0" y="0.0">com.company.DHKeyGenerator</node>
+    <node x="39.5" y="472.0">com.company.ServerConnection</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="com.company.Server" target="com.company.ServerConnection">
+      <point x="0.0" y="-38.5" />
+      <point x="0.0" y="177.0" />
+    </edge>
+    <edge source="com.company.ServerConnection" target="com.company.FileHandler">
+      <point x="-92.0" y="-177.0" />
+      <point x="0.0" y="73.5" />
+    </edge>
+    <edge source="com.company.Client" target="com.company.DHKeyGenerator">
+      <point x="0.0" y="-142.5" />
+      <point x="139.0" y="211.0" />
+    </edge>
+    <edge source="com.company.ClientDriver" target="com.company.Client">
+      <point x="0.0" y="-27.0" />
+      <point x="0.0" y="142.5" />
+    </edge>
+    <edge source="com.company.ServerConnection" target="com.company.DHKeyGenerator">
+      <point x="92.0" y="-177.0" />
+      <point x="315.5" y="447.0" />
+      <point x="422.0" y="447.0" />
+      <point x="-139.0" y="211.0" />
+    </edge>
+    <edge source="com.company.ServerDriver" target="com.company.Server">
+      <point x="0.0" y="-27.0" />
+      <point x="0.0" y="38.5" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="0.4233983286908078" x="711.0" y="528.5" />
+  <SelectedNodes />
+  <Categories>
+    <Category>Methods</Category>
+    <Category>Properties</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+
