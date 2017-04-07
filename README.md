@@ -1,5 +1,13 @@
 # ece422-ecryption-project
 
+# Usage
+- Unzip the zip file
+- cd into the "src" directory
+- run ./make.sh
+- run ./run-server.sh
+- run as many versions of "./run-client.sh" and follows on screen instructions
+  - Files served are in the "server-fles" directory
+
 # Introduction
   In this project, we will explore the usage of a realistic Feistel block cipher in creating a secure communications channel between a server and one or more clients. You are to create a file server program that receives requests for filenames over a socket, and passes that file to the requesting client. However, these requests and responses are to be kept secure by encrypting them using the Tiny Encryption Algorithm (TEA) cipher.
 
